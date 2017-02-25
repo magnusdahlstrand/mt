@@ -1,0 +1,51 @@
+#!/usr/bin/env node
+
+var midi = require('midi');
+
+function outPortNoToId(number) {
+	return number;
+}
+function inPortNoToId(number) {
+	return String.fromCharCode(number + 65);
+}
+
+
+function getInPorts() {
+	var input = new midi.input();
+
+	var portCount = input.getPortCount();
+	var ret = [];
+	for(var i = 0; i < portCount; i++) {
+		ret.push([inPortNoToId(i), input.getPortName(i)]);
+	}
+	return ret;
+}
+
+function getOutPorts() {
+	var output = new midi.output();
+
+	var portCount = output.getPortCount();
+	var ret = [];
+	for(var i = 0; i < portCount; i++) {
+		ret.push([outPortNoToId(i), output.getPortName(i)]);
+	}
+	return ret;
+}
+
+function printPorts(title, ports) {
+	if(ports.length) {
+		console.log(`${title}:`);
+		for([id, name] of ports) {
+			console.log(`${id}: ${name}`);
+		}
+	}
+	else {
+		console.log(`No ${title}!`);
+	}
+}
+
+printPorts("MIDI Inputs", getInPorts());
+console.log();
+printPorts("MIDI Outputs", getOutPorts());
+
+process.exit(0);

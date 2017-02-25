@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# mt midi
+# lists subcommands
+# lists devices
+
+# inputs are indexed by character
+# outputs are indexed by numbers
+
+if [[ -z "$1" ]]; then
+	lib/get-midi-ports
+fi
+

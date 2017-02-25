@@ -1,0 +1,18 @@
+{
+  "name": "mt",
+  "version": "0.0.1",
+  "description": "mt - media tools",
+  "main": "index.js",
+  "dependencies": {
+    "daemon": "^1.1.0",
+    "exit-hook": "^1.1.1",
+    "ioredis": "^2.5.0",
+    "midi": "^0.9.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Magnus Dahlstrand <magnus@mdahlstrand.com> (https://github.com/magnusdahlstrand)",
+  "license": "MIT"
+}

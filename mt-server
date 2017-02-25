@@ -1,0 +1,137 @@
+#!/usr/bin/env node
+
+// keeps a list of jobs
+// exits when list is empty
+
+// when called, checks if a server daemon is already running
+// and if so adds the job to it
+// otherwise, start a new daemon and send the job to it
+
+var fs = require('fs');
+
+var store = require('./lib/store');
+
+var files = {
+	pid: '.pid',
+	stdout: 'info.log',
+	stderr: 'error.log',
+}
+
+function isPidRunning(pid) {
+	try {
+		return process.kill(pid, 0);
+	}
+	catch(err) {
+		return false;
+	}
+}
+
+function checkIfRunning() {
+	return new Promise((done, fail) => {
+		fs.readFile(files.pid, 'utf8', (err, data) => {
+			if(err) {
+				return done({isRunning: false});
+			}
+			var pid = parseInt(data.trim(), 10);
+			if(isNaN(pid)) {
+				return fail(new Error('pid invalid'));
+			}
+			if(isPidRunning(pid)) {
+				return done({isRunning: true, pid: pid});
+			}
+			return done({isRunning: false});
+		});
+	});
+}
+
+function startServer() {
+	return new Promise((done, fail) => {
+		var daemon = require('daemon').daemon(module.filename, [], {
+			stdout: fs.openSync(files.stdout, 'a'),
+			stderr: fs.openSync(files.stderr, 'a'),
+		});
+		// HACK: Hopefully we've started at this point
+		setTimeout(() => {
+			console.log('STARTED', new Date());
+			done({isRunning: true});
+		}, 500);
+	});
+}
+
+function ensureServer() {
+	return checkIfRunning()
+	.then((info) => {
+		if(!info.isRunning) {
+			return startServer();
+		}
+		return info;
+	})
+	.catch(err => console.error(err));
+}
+
+function setupPid() {
+	var startTime = (new Date()).getTime();
+	return new Promise((done, fail) => {
+		process.on('exit', () => {
+			fs.unlinkSync(files.pid);
+			var ranFor = (new Date()).getTime() - startTime;
+			console.log('STOPPED', new Date());
+			console.log(`Ran for ${(ranFor / 1000).toFixed(2)} seconds`);
+		});
+		fs.writeFile(files.pid, process.pid, (err) => {
+			if(err) {
+				fail(err);
+			}
+			done();
+		});
+	})
+}
+
+function startJobQueue() {
+	var scheduler = require('./lib/scheduler');
+	store.getQueue().subscribe(jobId => {
+		console.log('got job', jobId);
+		scheduler.spawn(jobId);
+	});
+}
+
+function addJob(job) {
+	ensureServer()
+	.then(() => {
+		store.getQueue().add(job);
+	})
+	.catch(err => console.error(err));
+}
+
+function run() {
+	return Promise.all([
+		setupPid(),
+		startJobQueue()
+	])
+	.catch(err => console.error(err));
+}
+
+function main(argv) {
+	console.log(`in mt-server main ${argv}`);
+	// If there's already a pid file, don't start
+	checkIfRunning()
+	.then(({isRunning}) => {
+		if(isRunning) {
+			console.log('ALREADY RUNNING');
+			throw 'ALREADY RUNNING';
+		}
+		run();
+	})
+	.catch(err => console.error(err));
+	// TODO: Create a connection to the storage server
+	// TODO: A job processor should also be added
+}
+
+if(require.main === module) {
+	main(process.argv);
+	// process.exit(0);
+}
+
+module.exports = {
+	addJob
+};

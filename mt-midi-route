@@ -1,0 +1,78 @@
+#!/usr/bin/env node
+
+// routes input to output
+
+var usage = 'mt midi route <input|output> <output|input>';
+
+function inPortIdToNo(id) {
+	return id.toUpperCase().codePointAt(0) - 65;
+}
+
+function isInput(char) {
+	return /^[A-Z]$/.test(char);
+}
+function isOutput(char) {
+	return /^[0-9]$/.test(char);
+}
+
+function getPorts(first, second) {
+	if(!first || !second) {
+		console.log('not enough parameters');
+		process.exit(1);
+	}
+	if(isInput(first) && isOutput(second)) {
+		return {
+			input: inPortIdToNo(first),
+			output: parseInt(second, 10)
+		};
+	}
+	else if(isOutput(first) && isInput(second)) {
+		return {
+			input: inPortIdToNo(second),
+			output: parseInt(first, 10)
+		};
+	}
+	else {
+		console.log('you must combine an input with an output, or vice versa');
+		process.exit(2);
+	}
+}
+
+function job({input: inputPort, output: outputPort}) {
+	var midi = require('midi');
+	var input = new midi.input();
+	var output = new midi.output();
+	input.on('message', (deltaTime, msg) => {
+		output.sendMessage(msg);
+	});
+	input.openPort(inputPort);
+	output.openPort(outputPort);
+	return {
+		stop: () => {
+			input.closePort();
+			output.closePort();
+		}
+		// here the job can specify preferences
+		// such as whether it wants a sync signal
+	}
+}
+
+function main(argv) {
+	var ports = getPorts(process.argv[2], process.argv[3]);
+
+	var server = require('./mt-server');
+	server.addJob({
+		script: module.filename,
+		input: ports.input,
+		output: ports.output,
+	});
+}
+
+if(require.main === module) {
+	main(process.argv);
+	// process.exit(0);
+}
+
+module.exports = {
+	job
+};
