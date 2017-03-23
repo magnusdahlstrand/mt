@@ -1,5 +1,9 @@
 # MT
 
+A layered command structure much like git's is used, which means to add a new command all that is needed to do is add an executable file to the root, following the naming pattern: `mt-command`.
+
+The naming pattern can be extended for subcommands: `mt-command-sub`. You have to ensure the main command already exists for a subcommand to work.
+
 ## Jobs
 
 Jobs are added to queue, their properties to a map at $jobId
