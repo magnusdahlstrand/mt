@@ -7,7 +7,9 @@
 # inputs are indexed by character
 # outputs are indexed by numbers
 
+# TODO: Implement this in node
+
 if [[ -z "$1" ]]; then
-	lib/get-midi-ports
+	$(dirname $0)/lib/get-midi-ports
 fi
 

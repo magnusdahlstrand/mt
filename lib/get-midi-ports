@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// TODO: Expose this as a more usable library like jobs, files and tags
+
 var midi = require('midi');
 
 var {talk} = require('./utils');
