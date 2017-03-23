@@ -9,10 +9,10 @@
 
 var fs = require('fs');
 
-var {Jobs} = require('./lib/store');
+var {Jobs} = require('./lib/store/jobs');
 var jobs = new Jobs();
 
-var {talk, cry} = require('./lib/utils');
+var {talk} = require('./lib/utils');
 
 var files = {
 	pid: '.pid',
@@ -69,7 +69,7 @@ function ensureServer() {
 		}
 		return info;
 	})
-	.catch(cry);
+	.catch(talk.cry);
 }
 
 function setupPid() {
@@ -98,7 +98,7 @@ function addJob(job) {
 	ensureServer()
 	.then(() => jobs.add(job))
 	.then(() => jobs.close())
-	.catch(cry);
+	.catch(talk.cry);
 }
 
 function run() {
@@ -115,7 +115,7 @@ function main(argv) {
 	checkIfRunning()
 	.then(({isRunning}) => {
 		if(isRunning) {
-			cry('ALREADY RUNNING');
+			talk.cry('ALREADY RUNNING');
 			process.exit(1);
 		}
 		if(argv[2] === 'daemon') {
@@ -125,7 +125,7 @@ function main(argv) {
 			return ensureServer();
 		}
 	})
-	.catch(cry);
+	.catch(talk.cry);
 }
 
 if(require.main === module) {

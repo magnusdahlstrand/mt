@@ -4,23 +4,16 @@
 
 var usage = 'mt jobs';
 
-var {Jobs} = require('./lib/store');
-var jobs = new Jobs();
-var {talk, cry} = require('./lib/utils');
+var {Jobs} = require('./lib/store/jobs');
+var {mapToInfo, talk} = require('./lib/utils');
 
-function jobIdToRef(jobId) {
-	return jobId.split(':')[1].substr(0, 3);
-}
-
-function jobToInfo(job) {
-	return Object.entries(job).map(([key, val]) => `${key}=${val}`).join(' ');
-}
+var jobstore = new Jobs();
 
 function listJobs() {
-	return jobs.getAll()
+	return jobstore.getAll()
 	.then((allJobs) => {
 		for(var [jobId, job] of Object.entries(allJobs)) {
-			talk(`${jobIdToRef(jobId)} (${jobToInfo(job)})`);
+			talk(`${Jobs.idToRef(jobId)} (${mapToInfo(job)})`);
 		}
 		if(!Object.keys(allJobs).length) {
 			talk('No active jobs');
@@ -29,7 +22,7 @@ function listJobs() {
 }
 
 function stopAll() {
-	return jobs.getAllIds()
+	return jobstore.getAllIds()
 	.then(allJobs => {
 		return Promise.all(
 			allJobs.map(stopJob)
@@ -38,11 +31,11 @@ function stopAll() {
 }
 
 function stopJob(jobId) {
-	return jobs.stop(jobId)
+	return jobstore.stop(jobId)
 	.then(() => talk(`STOPPED ${jobId}`));
 }
 
-function act(cmd, ...args) {
+function main(cmd, ...args) {
 	if(!cmd) {
 		return listJobs();
 	}
@@ -52,25 +45,24 @@ function act(cmd, ...args) {
 				return stopAll();
 			}
 			else {
-				return jobs.derefAll(args)
+				return jobstore.derefAll(args)
 				.then(jobIds => Promise.all(jobIds.map(stopJob)));
 			}
 			break;
+		case undefined:
+			return Promise.reject('no command');
 		default:
-			talk('no idea?', cmd, args);
-			return Promise.resolve();
+			return Promise.reject(`command ${cmd} not recognised`);
 	}
 }
 
-function main(...args) {
-	act(...args)
-	.then(() => {
-		jobs.close();
-	})
-	.catch(cry);
-}
-
 if(require.main === module) {
-	main(...process.argv.slice(2));
-	// process.exit(0);
+	main(...process.argv.slice(2))
+	.then(() => {
+		jobstore.close();
+	})
+	.catch(err => {
+		talk.cry(err);
+		process.exit(1);
+	});
 }

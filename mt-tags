@@ -1,0 +1,117 @@
+#!/usr/bin/env node
+
+// tag management
+// mt tags : list tags
+// mt tags tag $anything* with $tag*
+// mt tags list $anything*
+
+var _ = require('lodash');
+
+var usage = 'mt tag $anything* with $tag*';
+
+var {mapToInfo, talk} = require('./lib/utils');
+var {Tags} = require('./lib/store/tags');
+var {Files} = require('./lib/store/files');
+var tagstore = new Tags();
+var filestore = new Files(tagstore.redis);
+
+function cmd_tag(args) {
+	if(!args.length) {
+		return Promise.reject('more input required');
+	}
+	var y = args.length;
+	var items, tags;
+	while(y--) {
+		if(args[y] === 'with') {
+			items = args.slice(0, y);
+			tags = args.slice(y + 1);
+			break;
+		}
+	}
+	if(!(items && tags)) {
+		return Promise.reject('unable to parse input');
+	}
+	// console.log('items', items);
+	// console.log('tags', tags);
+	return tagstore.tag(items, tags).then((...args) => {
+		console.log(`tagged (${items.join(' ')}) with (${tags.join(' ')})`);
+	});
+}
+
+function cmd_list_tags() {
+	return tagstore.listWithCounts()
+	.then(res => {
+		talk.whisper('tags:');
+		for(let [tag, count] of Object.entries(res)) {
+			talk(`${tag} (${count})`)
+		}
+	})
+	return tagstore.list()
+	.then(tags => {
+		talk('Tags:');
+		tags.forEach(tag => talk(` - ${tag}`))
+	})
+}
+
+function cmd_list_items(tags) {
+	if(tags.length < 1) {
+		return Promise.reject('not enough input');
+	}
+	else {
+		return tagstore.itemsByTags(tags)
+		.then(ids => {
+			return Promise.all(
+				ids.map(id => filestore.getProp('source', id))
+			)
+			.then(sources => _.zip(ids, sources))
+		})
+		.then(items => {
+			talk.whisper(`items tagged with ${tags}:`);
+			items.map(([id, source]) => {
+				talk(`${Files.idToRef(id)} ${source}`);
+			});
+			return items;
+		})
+		.then(items => {
+			if(!items.length) {
+				talk.warn(`no items found for intersection`);
+				return tagstore.exists(tags)
+				.then((exists) => _.zip(tags, exists))
+				.then(res => res.filter(([tag, exists]) => !exists))
+				.then(missing => {
+					missing.forEach(([tag, ]) => {
+						talk.warn(`${tag} does not exist`);
+					});
+					return Promise.reject(`missing tags`);
+				});
+			}
+		})
+	}
+}
+
+function main(cmd, ...args) {
+	switch(cmd) {
+		case 'tag':
+			return cmd_tag(args);
+		case 'list':
+		case undefined:
+			if(args.length) {
+				return cmd_list_items(args);
+			}
+			return cmd_list_tags();
+		default:
+			return Promise.reject('no matching command');
+	}
+}
+
+if(require.main === module) {
+	main(...process.argv.slice(2))
+	.then(() => {
+		tagstore.close()
+		filestore.close()
+	})
+	.catch(err => {
+		talk.cry(err);
+		process.exit(1);
+	});
+}

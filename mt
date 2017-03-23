@@ -6,10 +6,6 @@
 mt_path=$(realpath "$0")
 mt_root=$(dirname "$mt_path")
 
-pad() {
-	echo "  "
-}
-
 list_available_commands() {
 	echo "mt"
 	ls $mt_root | grep mt- | sed s/mt-// | xargs printf "   %s\n"
@@ -37,8 +33,10 @@ pick_command() {
 }
 
 run_command() {
-	cd "$mt_root" && PATH=.:./lib:$PATH "$@"
+	# echo $PWD
+	PATH="$mt_root":"$mt_root/lib":$PATH "$@"
 }
+
 if [[ -z "$1" ]]; then
 	# if no command, list all available
 	list_available_commands

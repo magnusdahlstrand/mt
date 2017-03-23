@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+
+// file management (add, list)
+
+var _ = require('lodash');
+
+var usage = 'mt add file*';
+
+var {mapToInfo, talk} = require('./lib/utils');
+var {Files} = require('./lib/store/files');
+var filestore = new Files();
+
+function main(cmd, ...args) {
+	switch(cmd) {
+		case 'add':
+			if(args.length) {
+				return filestore.addMany(args);
+			}
+			else {
+				return Promise.reject('no files to add');
+			}
+			break;
+		case 'rm':
+			if(args.length) {
+				return filestore.removeMany(args)
+				.then(sources => sources.map(source => talk(`removed ${source}`)));
+			}
+			else {
+				return Promise.reject('no files to remove');
+			}
+			break;
+		case 'list':
+			return filestore.listWithProps(['source'])
+			.then((files) => {
+				if(_.isEmpty(files)) {
+					throw 'no files to list';
+				}
+				Object.entries(files)
+				.forEach(([id, file]) =>
+					talk(`${Files.idToRef(id)} ${mapToInfo(file)}`)
+				)
+			});
+			break;
+		case undefined:
+			return Promise.reject('no command');
+		default:
+			return Promise.reject(`command ${cmd} not recognised`);
+	}
+}
+
+if(require.main === module) {
+	main(...process.argv.slice(2))
+	.then(() => {
+		filestore.close()
+	})
+	.catch(err => {
+		talk.cry(err);
+		process.exit(1);
+	});
+}

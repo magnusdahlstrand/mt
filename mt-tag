@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# mt tag items* with tags*
+
+mt-tags tag $@
