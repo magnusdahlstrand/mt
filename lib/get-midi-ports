@@ -2,6 +2,8 @@
 
 var midi = require('midi');
 
+var {talk} = require('./utils');
+
 function outPortNoToId(number) {
 	return number;
 }
@@ -34,18 +36,18 @@ function getOutPorts() {
 
 function printPorts(title, ports) {
 	if(ports.length) {
-		console.log(`${title}:`);
+		talk(`${title}:`);
 		for([id, name] of ports) {
-			console.log(`${id}: ${name}`);
+			talk(`${id}: ${name}`);
 		}
 	}
 	else {
-		console.log(`No ${title}!`);
+		talk(`No ${title}!`);
 	}
 }
 
 printPorts("MIDI Inputs", getInPorts());
-console.log();
+talk();
 printPorts("MIDI Outputs", getOutPorts());
 
 process.exit(0);

@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+
+// routes input to output
+
+var _ = require('lodash');
+
+var usage = 'mt add file*';
+
+var {Files} = require('./lib/store');
+var files = new Files();

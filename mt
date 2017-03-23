@@ -6,8 +6,13 @@
 mt_path=$(realpath "$0")
 mt_root=$(dirname "$mt_path")
 
+pad() {
+	echo "  "
+}
+
 list_available_commands() {
-	echo "all commands"
+	echo "mt"
+	ls $mt_root | grep mt- | sed s/mt-// | xargs printf "   %s\n"
 }
 pick_command() {
 	cmd_path="$mt_root/mt"

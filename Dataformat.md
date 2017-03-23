@@ -1,23 +1,23 @@
-# Queue
-
 List of jobs to execute.
 The server adds jobs and subscribes to it
 
 # Job
 
-`$script $args`
-hash( $script + $args )
-
-# Jobs
-
-`jobs`
-List of all jobs in progress
+$job is sha256( $script:$args )
+where $args is keyvalue pairs like `key=value`, sorted by key and concatenated by `:`
 
 `job:$job`
 Map containing properties sent with the job
 
+# Jobs
+
+`jobs`
+Set of all jobs in progress
+
 `job:$job:results`
 Map providing results from the job
+
+When a new job is added to the list of jobs, its jobId will broadcast on the `new:job` channel
 
 # File reference
 

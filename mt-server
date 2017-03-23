@@ -9,7 +9,10 @@
 
 var fs = require('fs');
 
-var store = require('./lib/store');
+var {Jobs} = require('./lib/store');
+var jobs = new Jobs();
+
+var {talk, cry} = require('./lib/utils');
 
 var files = {
 	pid: '.pid',
@@ -46,13 +49,13 @@ function checkIfRunning() {
 
 function startServer() {
 	return new Promise((done, fail) => {
-		var daemon = require('daemon').daemon(module.filename, [], {
+		var daemon = require('daemon').daemon(module.filename, ['daemon'], {
 			stdout: fs.openSync(files.stdout, 'a'),
 			stderr: fs.openSync(files.stderr, 'a'),
 		});
 		// HACK: Hopefully we've started at this point
 		setTimeout(() => {
-			console.log('STARTED', new Date());
+			talk('STARTED', new Date());
 			done({isRunning: true});
 		}, 500);
 	});
@@ -66,7 +69,7 @@ function ensureServer() {
 		}
 		return info;
 	})
-	.catch(err => console.error(err));
+	.catch(cry);
 }
 
 function setupPid() {
@@ -75,8 +78,8 @@ function setupPid() {
 		process.on('exit', () => {
 			fs.unlinkSync(files.pid);
 			var ranFor = (new Date()).getTime() - startTime;
-			console.log('STOPPED', new Date());
-			console.log(`Ran for ${(ranFor / 1000).toFixed(2)} seconds`);
+			talk('STOPPED', new Date());
+			talk(`Ran for ${(ranFor / 1000).toFixed(2)} seconds`);
 		});
 		fs.writeFile(files.pid, process.pid, (err) => {
 			if(err) {
@@ -87,44 +90,42 @@ function setupPid() {
 	})
 }
 
-function startJobQueue() {
-	var scheduler = require('./lib/scheduler');
-	store.getQueue().subscribe(jobId => {
-		console.log('got job', jobId);
-		scheduler.spawn(jobId);
-	});
+function launchScheduler() {
+	require('./lib/scheduler').create();
 }
 
 function addJob(job) {
 	ensureServer()
-	.then(() => {
-		store.getQueue().add(job);
-	})
-	.catch(err => console.error(err));
+	.then(() => jobs.add(job))
+	.then(() => jobs.close())
+	.catch(cry);
 }
 
 function run() {
 	return Promise.all([
 		setupPid(),
-		startJobQueue()
-	])
-	.catch(err => console.error(err));
+		launchScheduler()
+	]);
 }
 
+
 function main(argv) {
-	console.log(`in mt-server main ${argv}`);
+	talk(`in mt-server main ${argv}`);
 	// If there's already a pid file, don't start
 	checkIfRunning()
 	.then(({isRunning}) => {
 		if(isRunning) {
-			console.log('ALREADY RUNNING');
-			throw 'ALREADY RUNNING';
+			cry('ALREADY RUNNING');
+			process.exit(1);
 		}
-		run();
+		if(argv[2] === 'daemon') {
+			return run();
+		}
+		else {
+			return ensureServer();
+		}
 	})
-	.catch(err => console.error(err));
-	// TODO: Create a connection to the storage server
-	// TODO: A job processor should also be added
+	.catch(cry);
 }
 
 if(require.main === module) {

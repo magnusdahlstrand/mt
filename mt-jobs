@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+
+// routes input to output
+
+var usage = 'mt jobs';
+
+var {Jobs} = require('./lib/store');
+var jobs = new Jobs();
+var {talk, cry} = require('./lib/utils');
+
+function jobIdToRef(jobId) {
+	return jobId.split(':')[1].substr(0, 3);
+}
+
+function jobToInfo(job) {
+	return Object.entries(job).map(([key, val]) => `${key}=${val}`).join(' ');
+}
+
+function listJobs() {
+	return jobs.getAll()
+	.then((allJobs) => {
+		for(var [jobId, job] of Object.entries(allJobs)) {
+			talk(`${jobIdToRef(jobId)} (${jobToInfo(job)})`);
+		}
+		if(!Object.keys(allJobs).length) {
+			talk('No active jobs');
+		}
+	});
+}
+
+function stopAll() {
+	return jobs.getAllIds()
+	.then(allJobs => {
+		return Promise.all(
+			allJobs.map(stopJob)
+		);
+	});
+}
+
+function stopJob(jobId) {
+	return jobs.stop(jobId)
+	.then(() => talk(`STOPPED ${jobId}`));
+}
+
+function act(cmd, ...args) {
+	if(!cmd) {
+		return listJobs();
+	}
+	switch(cmd) {
+		case 'stop':
+			if(args.length === 0 || args[0] === 'all') {
+				return stopAll();
+			}
+			else {
+				return jobs.derefAll(args)
+				.then(jobIds => Promise.all(jobIds.map(stopJob)));
+			}
+			break;
+		default:
+			talk('no idea?', cmd, args);
+			return Promise.resolve();
+	}
+}
+
+function main(...args) {
+	act(...args)
+	.then(() => {
+		jobs.close();
+	})
+	.catch(cry);
+}
+
+if(require.main === module) {
+	main(...process.argv.slice(2));
+	// process.exit(0);
+}

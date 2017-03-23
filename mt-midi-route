@@ -2,6 +2,8 @@
 
 // routes input to output
 
+var {talk} = require('./lib/utils');
+
 var usage = 'mt midi route <input|output> <output|input>';
 
 function inPortIdToNo(id) {
@@ -17,7 +19,7 @@ function isOutput(char) {
 
 function getPorts(first, second) {
 	if(!first || !second) {
-		console.log('not enough parameters');
+		talk('not enough parameters');
 		process.exit(1);
 	}
 	if(isInput(first) && isOutput(second)) {
@@ -33,12 +35,14 @@ function getPorts(first, second) {
 		};
 	}
 	else {
-		console.log('you must combine an input with an output, or vice versa');
+		talk('you must combine an input with an output, or vice versa');
 		process.exit(2);
 	}
 }
 
-function job({input: inputPort, output: outputPort}) {
+function job(info) {
+	var inputPort = parseInt(info.input, 10);
+	var outputPort = parseInt(info.output, 10);
 	var midi = require('midi');
 	var input = new midi.input();
 	var output = new midi.output();
@@ -54,7 +58,7 @@ function job({input: inputPort, output: outputPort}) {
 		}
 		// here the job can specify preferences
 		// such as whether it wants a sync signal
-	}
+	};
 }
 
 function main(argv) {
