@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// routes input to output
+// manages jobs
 
 var usage = 'mt jobs';
 
